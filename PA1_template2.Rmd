@@ -1,0 +1,159 @@
+---
+title: "Reproducible Research"
+author: "David Infortunio"
+date: "March 26, 2016"
+output: html_document
+---
+
+This is an R Markdown document. 
+THis document looks at the steps taken in the study found here: https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip
+
+The following questions are explored:
+What is mean total number of steps taken per day?
+What is the average daily activity pattern?
+
+The following packages are used:
+```{r}
+library("ggplot2", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+library("date", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+library("ggplot2", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+library("plyr", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+ options(max.print=1000)
+ unzip("activity.zip")
+ echo = TRUE  # Always make code visible
+options(scipen = 1)  # Turn off scientific notations for numbers
+```
+
+
+The following code opens the file on my computer and sets the working directory:
+```{r}
+setwd("/home/david/Documents/dataScience/coursera/reproducible research/project1")
+      ACtivit<- read.csv("activity.csv")
+
+
+```
+
+
+The following code is designed to anser the following question: What is mean total number of steps taken per day?
+```{r}
+
+
+sumstep<-aggregate(ACtivit[,1],by = list(ACtivit[,2]), FUN=sum, na.rm=TRUE)
+      stepgraph<-qplot(sumstep[,2], xlab="number of steps per 5 minutes")
+      plot(stepgraph+geom_histogram())
+meastep<-mean(sumstep[,2])
+
+medstep<-median(sumstep[,2])
+paste("Median steps per day ", medstep, ". Mean steps per day ", meastep, sep="")
+```
+
+The following code is designed to answer the following question: What is the average daily activity pattern and what time in the day has the greatest average number of steps (mean and median)? 
+First the mean steps in each time intervial:
+```{r, echo=TRUE}
+tsteps<-sumstep<-aggregate(ACtivit[,1],by = list(ACtivit[,3]), FUN=mean, na.rm=TRUE)
+      png("meanStepsPerDay.png") 
+plot(tsteps[,1],tsteps[,2],type="l",xlab="time since midnight", ylab="Mean steps")
+mtsteps<-tsteps[tsteps[,2]==max(tsteps[,2]),]
+paste("The 5 minute intervial with the greatest mean number of steps is ", mtsteps[,1])
+   dev.off()     
+```
+Now the median steps in each time intervial:
+```{r, echo=TRUE}
+tsteps2<-sumstep2<-aggregate(ACtivit[,1],by = list(ACtivit[,3]), FUN=median, na.rm=TRUE)
+      png("MedianStepsPerDay.png") 
+plot(tsteps2[,1],tsteps2[,2],type="l",xlab="time since midnight", ylab="Median steps")
+
+mdsteps<-tsteps2[tsteps2[,2]==max(tsteps2[,2]),]
+paste("The 5 minute intervial with the greatest median number of steps is ", mdsteps[,1])
+   dev.off()     
+```
+
+
+The following code is designed to answer the following questions: How many missing values are there in the dataset, and what happens if those missing values are replaced with the mean for that 5 minute intervial?
+
+
+
+```{r}
+#msstep<-sum(is.na(ACtivit[,1]))
+#paste("There are ", msstep, "'NA' values in the data")
+
+ACT2<-ACtivit
+for (i in 1:length(ACT2[,1])) {
+        if (is.na(ACT2[i,1]) )        {       ACT2[i,1]<-tsteps[tsteps[,1]==ACT2[i,3],2]  }
+        }
+
+
+   
+
+msumstep3<-aggregate(ACT2[,1],by = list(ACT2[,2]), FUN=sum)
+
+ hist(msumstep3[,2])
+
+meastep2<-mean(msumstep3[,2])
+ medstep3<-median(msumstep3[,2])
+      par(mfcol=c(1,1))
+      png("StepsPerDayMissingremoved.png") 
+  hist(msumstep3[,2], main= paste("Median steps per day ", round(medstep3,2), ". Mean steps per day ", round(meastep2,2), sep=""), xlab = "Steps per day"    )
+
+    
+   dev.off()     
+```
+
+There was no change in the median value for the whole as a result of replacing the NAs with the median value for the day but there was an increase in the mean value for the whole data set as a result of replacing the NAs with the median value for the 5 minute period.
+```{r, echo=FALSE}
+
+
+ACT3<-ACtivit
+for (i in 1:length(ACT3[,1])) {
+        if (is.na(ACT3[i,1]) )               ACT3[i,1]<-tsteps[tsteps[,1]==ACT3[i,3],2]
+        }
+
+        
+        
+msumstep3<-aggregate(ACT3[,1],by = list(ACT3[,2]), FUN=sum, na.rm=TRUE)
+ hist(msumstep3[,2])
+
+ meastep3<-mean(msumstep3[,2])
+
+medstep3<-median(msumstep3[,2])
+paste("Median steps per day ", medstep3, ". Mean steps per day ", meastep3, sep="")        
+        
+```
+
+ "Median steps per day 10766.1886792453. Mean steps per day 10766.1886792453"
+
+The following code is designed to answer the following questions: how does behavior differ by day of the week:
+
+```{r}
+wday<-ACT2
+wday[,2]<-weekdays(as.Date(wday[,2],"%Y-%m-%d"))
+wday[,2]<-gsub("Monday|Tuesday|Wednesday|Thursday|Friday",1,wday[,2],perl=TRUE)
+wday[,2]<-gsub("Saturday|Sunday",0,wday[,2],perl=TRUE)
+meanNwday<-aggregate(wday[,1],by = list(wday[,2]), FUN=mean)
+
+meanNwday
+paste("Mean steps per 5 minute intervial on weekday ",meanNwday[2,2],". Mean steps per 5 minute intervial on weekend ",meanNwday[1,2],".",sep="")
+meanwday2<-aggregate(wday[,1],by = list(wday[,2],wday[,3]), FUN=mean)
+meanwday2<-rename(meanwday2,replace=c("Group.1"="week"))
+meanwday2<-rename(meanwday2,replace=c("Group.2"="TimeIntervial"))
+
+
+meanwday2[,1]<-gsub("end",1,meanwday2[,1],perl=TRUE)
+meanwday2[,1]<-gsub("Weekday",0,meanwday2[,1],perl=TRUE)
+
+
+dayt<-split(meanwday2, f=meanwday2$week)
+wend<-dayt[[1]]
+wdays<-dayt[[2]]
+png("WeekdayVsWeekend.png") 
+par(mfcol=c(2,1))
+
+
+
+plot(wend$TimeIntervial,wend$x, col="red",type="l", ylab="steps  weekend",xlab  ="5 minute intervials")
+
+plot(wdays$TimeIntervial,wdays$x, col="blue",type="l", xlab = "5 minute intervials",ylab="steps  weekday")
+dev.off()
+```
+
+So ithe mean steps per 5 minute intervial on the weekend is higher
